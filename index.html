@@ -83,8 +83,8 @@
         var ctx = canvas.getContext("2d");
 
         // camera is mirrored
-        ctx.translate(canvas.width, 0);
-        ctx.scale(-1, 1);
+        // ctx.translate(canvas.width, 0);
+        // ctx.scale(-1, 1);
 
         // define video (hidden in html)
         var video = document.getElementById("vid");
@@ -147,6 +147,12 @@
                 setInterval(function() {
                   // draw video onto canvas
                   ctx.fillStyle = "#FFFFFF";
+
+                  ctx.save();
+
+                  ctx.translate(canvas.width, 0);
+                  ctx.scale(-1, 1);
+
                   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
                   ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
@@ -163,6 +169,14 @@
                     data[i] = data[i+1] = data[i+2] = th;
                   }
                   ctx.putImageData(vidData, 0, 0);
+                  ctx.restore();
+
+                  // can be deleted afterwards!!!
+                  ctx.font = "bold 90px Open Sans";
+                  ctx.fillStyle = "#AD0000";
+                  ctx.textAlign = "center";
+                  ctx.fillText("WORK IN PROGRESS", canvas.width / 2, canvas.height / 2);
+                  // up to this line
 
                 }, 1);
               }, false);
