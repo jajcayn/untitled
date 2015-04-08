@@ -75,21 +75,16 @@
           return;
         }
 
-        // define canvases
+        // define canvas
         var canvas = document.getElementById("untitled");
         canvas.width = document.body.clientWidth;
         canvas.height = document.body.clientHeight;
 
-        var bgCanvas = document.createElement("canvas");
-        bgCanvas.width = document.body.clientWidth;
-        bgCanvas.height = document.body.clientHeight;
-
         var ctx = canvas.getContext("2d");
-        var bgCtx = bgCanvas.getContext("2d");
 
         // camera is mirrored -- will be uncommented in final version (without text)
-        bgCtx.translate(canvas.width, 0);
-        bgCtx.scale(-1, 1);
+        // ctx.translate(canvas.width, 0);
+        // ctx.scale(-1, 1);
 
         // define video (hidden in html)
         var video = document.getElementById("vid");
@@ -97,15 +92,8 @@
         // initial threshold value
         var threshold = 80;
 
-        // define start and remember the total start
-        var start = new Date().getTime();
-        var start_total = start;
-
-        // set power and operator
-        var pow = 4;
-        var power = pow;
-        var operator = -1;
-        var now;
+        // remember the total start
+        var start_total = new Date();
 
         // tracking up&down arrows for threshold manipulation, enter for screenshots (only Chrome)
         document.onkeydown = function(evt){
@@ -154,70 +142,45 @@
               video.width = window.innerWidth;
               video.height = window.innerHeight;
 
-              // draw white rect onto canvas
-              ctx.fillStyle = "#FFFFFF";
-              ctx.fillRect(0, 0, canvas.width, canvas.height);
-
               // if video can be played
               video.addEventListener('canplaythrough', function(e) {
                 setInterval(function() {
+                  // draw video onto canvas
+                  ctx.fillStyle = "#FFFFFF";
 
-                  // draw image from video onto bgCanvas -- this is needed to get pixels' data
-                  bgCtx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                  ctx.save(); // just for the text
 
-                  var ths = [];
+                  // just for the text - without it this can be done not in setInterval but before (flipping once, vs. flipping all the time)
+                  ctx.translate(canvas.width, 0);
+                  ctx.scale(-1, 1);
+
+                  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                  // draw image from video -- this is needed to get pixels' data
+                  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
                   // grayscale + threshold
-                  var canvasData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                  var vidData = bgCtx.getImageData(0, 0, canvas.width, canvas.height);
+                  var vidData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                  var data = vidData.data;
                   // by 4 as per each point there is 4 values as R,G,B,A (red, green, blue, alpha)
-                  for (var i = 0; i < vidData.data.length; i += 4) {
-                    var r = vidData.data[i];
-                    var g = vidData.data[i+1];
-                    var b = vidData.data[i+2];
+                  for (var i = 0; i < data.length; i += 4) {
+                    var r = data[i];
+                    var g = data[i+1];
+                    var b = data[i+2];
                     // color -> grayscale weighting (0.299, 0.587, 0.144) as in openCV package // suitable for testing
                     var th = (0.299*r + 0.587*g + 0.144*b >= threshold) ? 255 : 0;
-                    // vidData.data[i] = vidData.data[i+1] = vidData.data[i+2] = th;
-
-                    canvasData.data[i] += (th / 255) * power * operator;
-                    canvasData.data[i+1] += (th / 255) * power * operator;
-                    canvasData.data[i+2] += (th / 255) * power * operator;
-
-                    ths.push(canvasData.data[i]);
+                    data[i] = data[i+1] = data[i+2] = th;
                   }
+                  ctx.putImageData(vidData, 0, 0);
+                  
+                  ctx.restore(); // just for the text
 
-                  ctx.putImageData(canvasData, 0, 0);
-
-                  // compute average of grayscale pixels
-                  var sum = 0;
-                  for (var i = 0; i < ths.length; i++) {
-                    sum += parseInt(ths[i], 10);
-                  }
-                  var avg = sum / ths.length;
-
-                  if (avg < 255*0.2) {
-                    power = pow / 2;
-                  }
-                  else if (avg > 255*0.8 && new Date().getTime() - start_total > 30000) {
-                    power = pow / 2;
-                  } 
-                  else {
-                    power = pow;
-                  }
-
-                  now = new Date().getTime();
-                  if (avg < 255*0.1 || (now - start > 90000)) {
-                    operator *= -1;
-                    start = now;
-                  }
-
-                  now = new Date().getTime();
-                  if ((avg > 255*0.9 && (now - start_total > 45000)) || (now - start > 90000)) {
-                    operator *= -1;
-                    start = now;
-                  }
-
-                  console.log(avg, now-start);
+                  // can be deleted afterwards!!!
+                  ctx.font = "bold 90px Open Sans";
+                  ctx.fillStyle = "#AD0000";
+                  ctx.textAlign = "center";
+                  ctx.fillText("WORK IN PROGRESS", canvas.width / 2, canvas.height / 2);
+                  // up to this line
 
                 }, 1);
               }, false);
