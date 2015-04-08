@@ -17,12 +17,12 @@
         height: 100%;
         margin: 0;
         font-family: 'Open Sans', sans-serif;
-        background-color: #000000;
+        background-color: #151101;
         overflow: hidden;
       }
       
       #untitled {
-        background-color: #000000;
+        background-color: #151101;
         width: 100%;
         height: 100%;
         overflow: hidden;
@@ -31,7 +31,7 @@
       }
       
       .warning {
-        color: red;
+        color: #AD0000;
         font-weight: bold;
         font-size: 50px;
         top: 30%;
@@ -40,7 +40,7 @@
       }
 
       #vid {
-      	visibility: hidden;
+        visibility: hidden;
       }
     </style>
   </head>
@@ -58,9 +58,9 @@
 
     <canvas id="untitled"></canvas>
     <video id="vid" autoplay></video>
-	  
-	  <script>
-	    window.onload = function() {
+    
+    <script>
+      window.onload = function() {
         "use strict";
 
         //cross-browser
@@ -73,7 +73,7 @@
         }
 
         // define canvas
-				var canvas = document.getElementById("untitled");
+        var canvas = document.getElementById("untitled");
         canvas.width = document.body.clientWidth;
         canvas.height = document.body.clientHeight;
 
@@ -84,96 +84,96 @@
         ctx.scale(-1, 1);
 
         // define video (hidden in html)
-    		var video = document.getElementById("vid");
+        var video = document.getElementById("vid");
 
-    		// initial threshold value
-    		var threshold = 80;
+        // initial threshold value
+        var threshold = 80;
 
-    		// remember the total start
-    		var start_total = new Date();
+        // remember the total start
+        var start_total = new Date();
 
-    		// tracking up&down arrows for threshold manipulation, enter for screenshots (only Chrome)
-    		document.onkeydown = function(evt){
-    			evt = evt || window.event;
-    			// if arrow up, increase threshold
-    			if (evt.keyCode == 38) {
-    				threshold += 5;
-    			}
-    			// if arrow down, decrease threshold
-    			else if (evt.keyCode == 40) {
-    				threshold -= 5;
-    			}
-    			// if enter, save screenshot, works only in Chrome (as far as I know)
-    			else if (evt.keyCode == 13) {
-    				var ua = window.navigator.userAgent;
+        // tracking up&down arrows for threshold manipulation, enter for screenshots (only Chrome)
+        document.onkeydown = function(evt){
+          evt = evt || window.event;
+          // if arrow up, increase threshold
+          if (evt.keyCode == 38) {
+            threshold += 5;
+          }
+          // if arrow down, decrease threshold
+          else if (evt.keyCode == 40) {
+            threshold -= 5;
+          }
+          // if enter, save screenshot, works only in Chrome (as far as I know)
+          else if (evt.keyCode == 13) {
+            var ua = window.navigator.userAgent;
 
-    				if (ua.indexOf("Chrome") > 0) {
-    					var link = document.createElement('a');
-	    				link.download = "UNTITLED_scrnsht.png";
-	    				link.href = canvas.toDataURL('image/png').replace("image/png", "image/octet-stream");
-	    				link.click();
-    				}
-    				else {
-    					alert("Saving screenshots works only in Chrome!");
-    				}
-    			}
-    		};
+            if (ua.indexOf("Chrome") > 0) {
+              var link = document.createElement('a');
+              link.download = "UNTITLED_scrnsht.png";
+              link.href = canvas.toDataURL('image/png').replace("image/png", "image/octet-stream");
+              link.click();
+            }
+            else {
+              alert("Saving screenshots works only in Chrome!");
+            }
+          }
+        };
 
-				navigator.getUserMedia(
-			    {
-			    	video: {
-			    		// series of minWidth make browser always takes maximum resolution on HW camera
-			    		optional: [
-			    			{minWidth: 320},
-						    {minWidth: 640},
-						    {minWidth: 1024},
-						    {minWidth: 1280},
-						    {minWidth: 1920},
-						    {minWidth: 2560},
-			    		]
-			    	}, audio: false
-			    },
-			    // if success
-			    function(stream) {
-	            video.autoplay = true;
-	            video.width = window.innerWidth;
-	            video.height = window.innerHeight;
+        navigator.getUserMedia(
+          {
+            video: {
+              // series of minWidth make browser always takes maximum resolution on HW camera
+              optional: [
+                {minWidth: 320},
+                {minWidth: 640},
+                {minWidth: 1024},
+                {minWidth: 1280},
+                {minWidth: 1920},
+                {minWidth: 2560},
+              ]
+            }, audio: false
+          },
+          // if success
+          function(stream) {
+              video.autoplay = true;
+              video.width = window.innerWidth;
+              video.height = window.innerHeight;
 
-	            // if video can be played
-	            video.addEventListener('canplaythrough', function(e) {
-	            	setInterval(function() {
-	            		// draw video onto canvas
-	            		ctx.fillStyle = "#FFFFFF";
-	            		ctx.fillRect(0, 0, canvas.width, canvas.height);
+              // if video can be played
+              video.addEventListener('canplaythrough', function(e) {
+                setInterval(function() {
+                  // draw video onto canvas
+                  ctx.fillStyle = "#FFFFFF";
+                  ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-	            		ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-	            		// grayscale + threshold
-	            		var vidData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-	            		var data = vidData.data;
-	            		for (var i = 0; i < data.length; i += 4) {
-	            			var r = data[i];
-	            			var g = data[i+1];
-	            			var b = data[i+2];
-	            			// color -> grayscale weighting (0.299, 0.587, 0.144) as in openCV package // suitable for testing
-	            			var th = (0.299*r + 0.587*g + 0.144*b >= threshold) ? 255 : 0;
-	            			data[i] = data[i+1] = data[i+2] = th;
-	            		}
-	            		ctx.putImageData(vidData, 0, 0);
+                  // grayscale + threshold
+                  var vidData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                  var data = vidData.data;
+                  for (var i = 0; i < data.length; i += 4) {
+                    var r = data[i];
+                    var g = data[i+1];
+                    var b = data[i+2];
+                    // color -> grayscale weighting (0.299, 0.587, 0.144) as in openCV package // suitable for testing
+                    var th = (0.299*r + 0.587*g + 0.144*b >= threshold) ? 255 : 0;
+                    data[i] = data[i+1] = data[i+2] = th;
+                  }
+                  ctx.putImageData(vidData, 0, 0);
 
-	            	}, 1);
-	            }, false);
+                }, 1);
+              }, false);
 
-			    		video.src = window.URL.createObjectURL(stream);
-			    },
-			    // if error
-			    function(err) {
-			        document.getElementById("camera-warning").style.display = "block";
-	            console.log("Error: ", err);
-			    }
-				);
-			};
-	  </script>
+              video.src = window.URL.createObjectURL(stream);
+          },
+          // if error
+          function(err) {
+              document.getElementById("camera-warning").style.display = "block";
+              console.log("Error: ", err);
+          }
+        );
+      };
+    </script>
   </body>
 
 </html>
