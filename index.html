@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <link rel="icon" type="image/png" sizes="96x96" href="favicon-96x96.png">
     <meta name="description" content="UNTITLED videoart">
-    <meta name="keywords" content="JavaScript,getUserMedia,HTML5,canvas,UNTITLED,videart">
+    <meta name="keywords" content="JavaScript,getUserMedia,HTML5,canvas,UNTITLED,videoart">
     <meta name="author" content="Miso Ormos // Nikola Jajcay">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>UNTITLED</title>
@@ -82,7 +82,7 @@
 
         var ctx = canvas.getContext("2d");
 
-        // camera is mirrored
+        // camera is mirrored -- will be uncommented in final version (without text)
         // ctx.translate(canvas.width, 0);
         // ctx.scale(-1, 1);
 
@@ -148,18 +148,21 @@
                   // draw video onto canvas
                   ctx.fillStyle = "#FFFFFF";
 
-                  ctx.save();
+                  ctx.save(); // just for the text
 
+                  // just for the text - without it this can be done not in setInterval but before (flipping once, vs. flipping all the time)
                   ctx.translate(canvas.width, 0);
                   ctx.scale(-1, 1);
 
                   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+                  // draw image from video -- this is needed to get pixels' data
                   ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
                   // grayscale + threshold
                   var vidData = ctx.getImageData(0, 0, canvas.width, canvas.height);
                   var data = vidData.data;
+                  // by 4 as per each point there is 4 values as R,G,B,A (red, green, blue, alpha)
                   for (var i = 0; i < data.length; i += 4) {
                     var r = data[i];
                     var g = data[i+1];
@@ -169,7 +172,8 @@
                     data[i] = data[i+1] = data[i+2] = th;
                   }
                   ctx.putImageData(vidData, 0, 0);
-                  ctx.restore();
+                  
+                  ctx.restore(); // just for the text
 
                   // can be deleted afterwards!!!
                   ctx.font = "bold 90px Open Sans";
