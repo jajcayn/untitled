@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>UNTITLED</title>
+    <link rel="icon" type="image/png" sizes="96x96" href="favicon-96x96.png">
     <meta name="description" content="UNTITLED videoart">
     <style>
       @import url(http://fonts.googleapis.com/css?family=Open+Sans:300);
@@ -33,7 +34,7 @@
       .warning {
         color: #AD0000;
         font-weight: bold;
-        font-size: 50px;
+        font-size: 32px;
         top: 30%;
         left: 30%;
         position: absolute;
@@ -58,7 +59,7 @@
 
     <canvas id="untitled"></canvas>
     <video id="vid" autoplay></video>
-    
+
     <script>
       window.onload = function() {
         "use strict";
@@ -122,7 +123,7 @@
         navigator.getUserMedia(
           {
             video: {
-              // series of minWidth make browser always takes maximum resolution on HW camera
+              // series of minWidth make browser always take maximum resolution on HW camera
               optional: [
                 {minWidth: 320},
                 {minWidth: 640},
