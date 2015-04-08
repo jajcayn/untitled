@@ -177,15 +177,17 @@
                     var b = vidData.data[i+2];
                     // color -> grayscale weighting (0.299, 0.587, 0.144) as in openCV package // suitable for testing
                     var th = (0.299*r + 0.587*g + 0.144*b >= threshold) ? 255 : 0;
-                    // vidData.data[i] = vidData.data[i+1] = vidData.data[i+2] = th;
 
+                    // add to canvas desired value
                     canvasData.data[i] += (th / 255) * power * operator;
                     canvasData.data[i+1] += (th / 255) * power * operator;
                     canvasData.data[i+2] += (th / 255) * power * operator;
 
+                    // push the value to the array for averaging
                     ths.push(canvasData.data[i]);
                   }
 
+                  // put the pixles onto canvas
                   ctx.putImageData(canvasData, 0, 0);
 
                   // compute average of grayscale pixels
@@ -195,6 +197,7 @@
                   }
                   var avg = sum / ths.length;
 
+                  // if 80% of black or white -- slow down
                   if (avg < 255*0.2) {
                     power = pow / 2;
                   }
@@ -205,6 +208,7 @@
                     power = pow;
                   }
 
+                  // if 90% black or white (or after 90s elapsed) -- reverse the process
                   now = new Date().getTime();
                   if (avg < 255*0.1 || (now - start > 90000)) {
                     operator *= -1;
@@ -216,8 +220,6 @@
                     operator *= -1;
                     start = now;
                   }
-
-                  console.log(avg, now-start);
 
                 }, 1);
               }, false);
