@@ -37,6 +37,7 @@
         font-size: 32px;
         top: 5%;
         left: 5%;
+        /*position: absolute;*/
       }
 
       #vid {
@@ -58,6 +59,7 @@
     </div>
 
     <canvas id="untitled"></canvas>
+    <!-- <video id="vid" autoplay></video> -->
 
     <script id="vertex-shader" type="x-vertex-shader">
       attribute vec2 aPosition;
@@ -138,15 +140,15 @@
           // uniforms: ["videoTexture"]
         });
 
-        gl.uniform2f(gl_vars.uResolution, canvas.width, canvas.height);
+        // gl.uniform2f(gl_vars.uResolution, canvas.width, canvas.height);
 
         // var points = new Float32Array(max_points * 3);
         // var velocities = new Float32Array(max_points * 3);
 
-        gl.clearColor(1.0, 1.0, 1.0, 1.0);
-        gl.enable(gl.BLEND);
-        gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
-        gl.clear(gl.COLOR_BUFFER_BIT);
+        // gl.clearColor(1.0, 1.0, 1.0, 1.0);
+        // gl.enable(gl.BLEND);
+        // gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+        // gl.clear(gl.COLOR_BUFFER_BIT);
 
         navigator.getUserMedia({
             video: true

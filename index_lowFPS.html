@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <link rel="icon" type="image/png" sizes="96x96" href="favicon-96x96.png">
+    <meta name="description" content="UNTITLED videoart">
+    <meta name="keywords" content="JavaScript,getUserMedia,HTML5,canvas,UNTITLED,videoart">
+    <meta name="author" content="Miso Ormos // Nikola Jajcay">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>UNTITLED</title>
+    <style>
+      @import url(http://fonts.googleapis.com/css?family=Ek+Mukta:200);
+
+      html {
+        height: 100%;
+        overflow: hidden;
+      }
+      
+      body {
+        height: 100%;
+        margin: 0;
+        font-family: 'Ek Mukta', sans-serif;
+        background-color: #151101;
+        overflow: hidden;
+      }
+      
+      #untitled {
+        background-color: #151101;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+      }
+      
+      .warning {
+        color: #AD0000;
+        font-weight: bold;
+        font-size: 32px;
+        top: 5%;
+        left: 5%;
+        position: absolute;
+      }
+
+      #vid {
+        visibility: hidden;
+      }
+    </style>
+  </head>
+  <body>
+
+    <div id="compatibility-warning" class="warning" style="display:none">
+      Your browser does not seem to support functionality required for this experiment.<br />
+      <a href="http://www.mozilla.org/en-US/firefox/new/">Mozilla Firefox</a> or
+      <a href="https://www.google.com/intl/en/chrome/browser/">Google Chrome</a> are recommended for best viewing.
+    </div>
+
+    <div id="camera-warning" class="warning" style="display:none">
+      Camera not found. Unable to start experiment.
+    </div>
+
+    <canvas id="untitled"></canvas>
+    <video id="vid" autoplay></video>
+
+    <script>
+    // TODO: add opaque canvas on the left with info on mousehover
+      window.onload = function() {
+        "use strict";
+
+        //cross-browser
+        navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia;
+
+        // getUserMedia check
+        if (!(window.WebGLRenderingContext && document.createElement('canvas').getContext('experimental-webgl')) || !navigator.getUserMedia) {
+          document.getElementById("compatibility-warning").style.display = "block";
+          return;
+        }
+
+        // define canvases
+        var canvas = document.getElementById("untitled");
+        canvas.width = document.body.clientWidth;
+        canvas.height = document.body.clientHeight;
+
+        var bgCanvas = document.createElement("canvas");
+        bgCanvas.width = document.body.clientWidth;
+        bgCanvas.height = document.body.clientHeight;
+
+        var ctx = canvas.getContext("2d");
+        var bgCtx = bgCanvas.getContext("2d");
+
+        // camera is mirrored -- will be uncommented in final version (without text)
+        bgCtx.translate(canvas.width, 0);
+        bgCtx.scale(-1, 1);
+
+        // define video (hidden in html)
+        var video = document.getElementById("vid");
+
+        // initial threshold value
+        var threshold = 80;
+
+        // define start and remember the total start
+        var start = new Date().getTime();
+        var start_total = start;
+
+        // set power and operator
+        var pow = 4;
+        var power = pow;
+        var operator = -1;
+        var now;
+
+        // tracking up&down arrows for threshold manipulation, enter for screenshots (only Chrome)
+        document.onkeydown = function(evt){
+          evt = evt || window.event;
+          // if arrow up, increase threshold
+          if (evt.keyCode == 38) {
+            threshold += 5;
+          }
+          // if arrow down, decrease threshold
+          else if (evt.keyCode == 40) {
+            threshold -= 5;
+          }
+          // if enter, save screenshot, works only in Chrome (as far as I know)
+          else if (evt.keyCode == 13) {
+            var ua = window.navigator.userAgent;
+
+            if (ua.indexOf("Chrome") > 0) {
+              var link = document.createElement('a');
+              link.download = "UNTITLED_scrnsht.png";
+              link.href = canvas.toDataURL('image/png').replace("image/png", "image/octet-stream");
+              link.click();
+            }
+            else {
+              alert("Saving screenshots works only in Chrome!");
+            }
+          }
+        };
+
+        navigator.getUserMedia(
+          {
+            video: {
+              // series of minWidth make browser always take maximum resolution on HW camera
+              optional: [
+                {minWidth: 320},
+                {minWidth: 640},
+                {minWidth: 1024},
+                {minWidth: 1280},
+                {minWidth: 1920},
+                {minWidth: 2560},
+              ]
+            }, audio: false
+          },
+          // if success
+          function(stream) {
+              video.autoplay = true;
+              video.width = window.innerWidth;
+              video.height = window.innerHeight;
+
+              // draw white rect onto canvas
+              ctx.fillStyle = "#FFFFFF";
+              ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+              // if video can be played
+              video.addEventListener('canplaythrough', function(e) {
+                setInterval(function() {
+
+                  // draw image from video onto bgCanvas -- this is needed to get pixels' data
+                  bgCtx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                  var ths = [];
+
+                  // grayscale + threshold
+                  var canvasData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                  var vidData = bgCtx.getImageData(0, 0, canvas.width, canvas.height);
+                  // by 4 as per each point there is 4 values as R,G,B,A (red, green, blue, alpha)
+                  for (var i = 0; i < vidData.data.length; i += 4) {
+                    var r = vidData.data[i];
+                    var g = vidData.data[i+1];
+                    var b = vidData.data[i+2];
+                    // color -> grayscale weighting (0.299, 0.587, 0.144) as in openCV package // suitable for testing
+                    var th = (0.299*r + 0.587*g + 0.144*b >= threshold) ? 255 : 0;
+
+                    // add to canvas desired value
+                    canvasData.data[i] += (th / 255) * power * operator;
+                    canvasData.data[i+1] += (th / 255) * power * operator;
+                    canvasData.data[i+2] += (th / 255) * power * operator;
+
+                    // push the value to the array for averaging
+                    ths.push(canvasData.data[i]);
+                  }
+
+                  // put the pixles onto canvas
+                  ctx.putImageData(canvasData, 0, 0);
+
+                  // compute average of grayscale pixels
+                  var sum = 0;
+                  for (var i = 0; i < ths.length; i++) {
+                    sum += parseInt(ths[i], 10);
+                  }
+                  var avg = sum / ths.length;
+
+                  // if 80% of black or white -- slow down
+                  if (avg < 255*0.2) {
+                    power = pow / 2;
+                  }
+                  else if (avg > 255*0.8 && new Date().getTime() - start_total > 30000) {
+                    power = pow / 2;
+                  } 
+                  else {
+                    power = pow;
+                  }
+
+                  // if 90% black or white (or after 90s elapsed) -- reverse the process
+                  now = new Date().getTime();
+                  if (avg < 255*0.1 || (now - start > 90000)) {
+                    operator *= -1;
+                    start = now;
+                  }
+
+                  now = new Date().getTime();
+                  if ((avg > 255*0.9 && (now - start_total > 45000)) || (now - start > 90000)) {
+                    operator *= -1;
+                    start = now;
+                  }
+
+                  console.log(avg, now - start);
+
+                }, 33);
+              }, false);
+
+              video.src = window.URL.createObjectURL(stream);
+          },
+          // if error
+          function(err) {
+              document.getElementById("camera-warning").style.display = "block";
+              console.log("Error: ", err);
+          }
+        );
+      };
+    </script>
+  </body>
+
+</html>
