@@ -215,6 +215,7 @@
 
               // set defaults
               var start_anim = Date.now();
+              var last_change = start_anim;
               var direction = -1;
 
               // create texture with video
@@ -319,10 +320,28 @@
                 gl.viewport(0, 0, canvas.width, canvas.height);
 
                 gl.drawArrays(gl.TRIANGLES, 0, 6);
+  
+                // control of the loop                
+                var pixels = new Uint8Array(canvas.width * canvas.height * 4);
+                gl.readPixels(0, 0, canvas.width, canvas.height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
                 
-                // if control of loop is to happen here, then read pixels from framebuffer
-                // var pixels = new Uint8Array(canvas.width * canvas.height * 4);
-                // gl.readPixels(0, 0, canvas.width, canvas.height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+                // compute average
+                var sum = 0;
+                for (var i = 0; i < canvas.width * canvas.height * 4; i += 4) {
+                  sum += pixels[i];
+                }
+                var avg = sum / (canvas.width * canvas.height);
+                console.log(avg);
+                
+                if (avg < 0.1 * 255 || now - last_change > 90000) {
+                  direction *= -1;
+                  last_change = now;
+                }
+
+                if ((avg > 0.9 * 255 && now - start_anim > 30000) || now - last_change > 90000) {
+                  direction *= -1;
+                  last_change = now;
+                }
 
                 // renders from input texture to canvas
                 gl.bindTexture(gl.TEXTURE_2D, texture1);
