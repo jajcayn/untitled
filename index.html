@@ -65,7 +65,7 @@
       varying vec2 vTextCoords;
 
       void main(void) {
-        gl_Position = vec4(aPosition, 1.0);
+        gl_Position = vec4(aPosition.st * vec2(-1, 1), aPosition.z, 1);
         vTextCoords = vec2(aPosition.st)*0.5 + 0.5;
       }
 
@@ -139,6 +139,12 @@
         var canvas = document.getElementById("untitled");
         canvas.width = document.body.clientWidth;
         canvas.height = document.body.clientHeight;
+
+        // var context = canvas.getContext('2d');
+        // // translate context to center of canvas
+        // context.translate(canvas.width / 2, canvas.height / 2);
+        // // flip context horizontally
+        // context.scale(-1, 1);
 
         var thresh = 120/255;
 
