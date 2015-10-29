@@ -348,10 +348,9 @@
         );
 
         window.onresize = function() {
-          canvas.width = document.body.clientWidth;
-          canvas.height = document.body.clientHeight;
+          canvas.width = gl.canvas.width;
+          canvas.height = gl.canvas.height;
           gl.viewport(0, 0, canvas.width, canvas.height);
-          // gl.uniform2f(gl_varsRender.uResolution, canvas.width, canvas.height);
         }
         
       };
