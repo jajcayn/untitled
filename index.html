@@ -43,6 +43,7 @@
         visibility: hidden;
       }
     </style>
+    <!-- with help of gl-utils by Tarek Sherif -> https://github.com/tsherif/gl-utils -->
     <script src="gl-utils.min.js"></script>
   </head>
   <body>
@@ -256,14 +257,14 @@
               setTimeout(drawScene, 1500);
 
               function drawScene() {
-                // main loop
+                // this is the main loop
                 
                 var now = Date.now();
 
                 // loop
                 requestAnimationFrame(drawScene);
 
-                // set buffer to render
+                // set buffers to render triangles
                 glUtils.setBuffer(gl, gl_varsMagic.aPosition, 
                   new Float32Array([
                       -1.0, -1.0,
@@ -289,7 +290,8 @@
                 gl.bindTexture(gl.TEXTURE_2D, vidTexture);
                 gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
 
-                // magic happens
+                // magic happens -> using Magic fragment-shader
+                // renders from input texture to temp. texture
                 gl.activeTexture(gl.TEXTURE1);
                 gl.bindTexture(gl.TEXTURE_2D, texture1);
                 gl.bindFramebuffer(gl.FRAMEBUFFER,framebuffer2);
@@ -306,16 +308,14 @@
 
                 gl.drawArrays(gl.TRIANGLES, 0, 6);
 
-                // render to input texture
+                // rendering -> using Render fragment-shader
+                // renders from temp. texture back to input texture
                 gl.disable(gl.BLEND);
                 gl.activeTexture(gl.TEXTURE2);
                 gl.bindTexture(gl.TEXTURE_2D, texture2);
                 gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer1);
                 gl.useProgram(programRender);
 
-                // gl.clearColor(0,0,0,1);
-                // gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-                // gl.enable(gl.DEPTH_TEST);
                 gl.viewport(0, 0, canvas.width, canvas.height);
 
                 gl.drawArrays(gl.TRIANGLES, 0, 6);
@@ -324,7 +324,7 @@
                 // var pixels = new Uint8Array(canvas.width * canvas.height * 4);
                 // gl.readPixels(0, 0, canvas.width, canvas.height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
 
-                // render to canvas
+                // renders from input texture to canvas
                 gl.bindTexture(gl.TEXTURE_2D, texture1);
                 gl.bindFramebuffer(gl.FRAMEBUFFER, null);
                 gl.useProgram(programRender);
