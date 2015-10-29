@@ -20,12 +20,12 @@
         height: 100%;
         margin: 0;
         font-family: 'Ek Mukta', sans-serif;
-        background-color: #151101;
+        background-color: #262626;
         overflow: hidden;
       }
       
       #untitled {
-        background-color: #151101;
+        background-color: #262626;
         width: 100%;
         height: 100%;
         overflow: hidden;
@@ -43,7 +43,7 @@
         visibility: hidden;
       }
     </style>
-    <script src="gl-utils.js"></script>
+    <script src="gl-utils.min.js"></script>
   </head>
   <body>
 
@@ -60,49 +60,56 @@
     <canvas id="untitled"></canvas>
 
     <script id="vertex-shader" type="x-vertex-shader">
-      attribute vec2 aPosition;
-      
-      // draws a rectangle over whole clipspace
-      void main() {
-        gl_Position = vec4(aPosition, 0, 1);
+      attribute vec3 aPosition;
+      varying vec2 vTextCoords;
+
+      void main(void) {
+        gl_Position = vec4(aPosition, 1.0);
+        vTextCoords = vec2(aPosition.st)*0.5 + 0.5;
       }
 
     </script>
     
-    <script id="fragment-shader" type="x-fragment-shader">
+    <script id="fragment-shader-render" type="x-fragment-shader">
       precision mediump float;
 
-      // varying float vNearness;
+      uniform sampler2D canvasTexture;
+      varying vec2 vTextCoords;
 
-      uniform vec2 uResolution;
+      void main(void) {
+
+        vec4 videoSample = texture2D(canvasTexture, vTextCoords);
+
+        gl_FragColor = videoSample;
+      }
+
+    </script> 
+
+    <script id="fragment-shader-magic" type="x-fragment-shader">
+      precision mediump float;
+
+      varying vec2 vTextCoords;
+
+      uniform sampler2D canvasTexture;
       uniform sampler2D videoTexture;
+      uniform float thresh;
+      uniform float direction;
 
-      void main() {
-
-        // vec2 diff = gl_PointCoord - vec2(0.5, 0.5);
-        // if (length(diff) > 0.5) {
-        //   discard;
-        // }
-
-        // vec2 position = gl_FragCoord.xy / uResolution.xy;
-
-        // vec2 p = position * 2.0 - 1.0;
-        // p.x *= uResolution.x / uResolution.y;
-
-        // vec4 rainColor = vec4(0.6, 0.8, 1.0, vNearness * 0.9);
+      void main(void) {
         vec4 videoColor = vec4(1.0);
 
-        // if (p.x >= -1.0 && p.y >= -1.0 && p.x <= 1.0 && p.y <= 1.0) {
-        // p = p * 0.5 + 0.5;
-        // p.x = 1.0 - p.x;
-        vec4 videoSample = texture2D(videoTexture, vec2(0, 0));
+        vec4 videoSample = texture2D(videoTexture, vTextCoords);
+        vec4 canvasSample = texture2D(canvasTexture, vTextCoords);
         float luminance = 0.2126 * videoSample.r + 0.7152 * videoSample.g + 0.0722 * videoSample.b;
-        videoColor = vec4(vec3(luminance * 1.8), 1.0);
-        // }
+        videoColor = vec4(canvasSample.r, canvasSample.g, canvasSample.b, 1.0);
+        if(luminance < thresh) {            
+            // set up speed somehow!
+            videoColor = vec4(canvasSample.r + direction * 0.002, canvasSample.g + direction * 0.002, canvasSample.b + direction * 0.002, 1.0);
+        }
 
-        // gl_FragColor = rainColor * videoColor;
         gl_FragColor = videoColor;
       }
+
     </script> 
 
     <script>
@@ -121,35 +128,81 @@
                                  return window.setTimeout(callback, 1000 / 60);
                                };
 
+        // error catching
         if (!(window.WebGLRenderingContext && document.createElement('canvas').getContext('experimental-webgl')) || !navigator.getUserMedia) {
           document.getElementById("compatibility-warning").style.display = "block";
           return;
         }
 
+        // setup canvas
         var canvas = document.getElementById("untitled");
         canvas.width = document.body.clientWidth;
         canvas.height = document.body.clientHeight;
 
+        var thresh = 120/255;
+
+        // tracking up&down arrows for threshold manipulation, enter for screenshots (only Chrome)
+        document.onkeydown = function(evt){
+          evt = evt || window.event;
+          // if arrow up, increase threshold
+          if (evt.keyCode == 38) {
+            thresh += 5/255;
+          }
+          // if arrow down, decrease threshold
+          else if (evt.keyCode == 40) {
+            thresh -= 5/255;
+          }
+
+          // if enter, save screenshot, works only in Chrome (as far as I know)
+          else if (evt.keyCode == 13) {
+            var ua = window.navigator.userAgent;
+
+            if (ua.indexOf("Chrome") > 0) {
+              var link = document.createElement('a');
+              link.download = "UNTITLED_scrnsht.png";
+              link.href = canvas.toDataURL('image/png').replace("image/png", "image/octet-stream");
+              link.click();
+            }
+            else {
+              alert("Saving screenshots works only in Chrome!");
+            }
+          }
+        };
+
+        // setup WebGL
         var gl = glUtils.getGL(canvas);
-        var program = glUtils.getProgram(gl, "vertex-shader", "fragment-shader");
-        var gl_vars = glUtils.getGLVars(gl, program, {
-          attributes: ["aPosition"],
-          uniforms: ["uResolution", "videoTexture"]
-          // uniforms: ["videoTexture"]
+        var programMagic = glUtils.getProgram(gl, "vertex-shader", "fragment-shader-magic");
+        var gl_varsMagic = glUtils.getGLVars(gl, programMagic, {
+            attributes: ["aPosition"],
+            uniforms: ["canvasTexture", "videoTexture", "thresh", "direction"]
         });
+        gl.uniform1i(gl_varsMagic.videoTexture, 0);
+        gl.uniform1i(gl_varsMagic.canvasTexture, 1);
+       
+        var programRender = glUtils.getProgram(gl, "vertex-shader", "fragment-shader-render");
+        var gl_varsRender = glUtils.getGLVars(gl, programRender, {
+          attributes: ["aPosition"],
+          uniforms: ["canvasTexture"]
+        });
+        gl.uniform1i(gl_varsRender.canvasTexture, 2);
 
-        gl.uniform2f(gl_vars.uResolution, canvas.width, canvas.height);
+        // pass uniforms
+        // gl.uniform2f(gl_varsRender.uResolution, canvas.width, canvas.height);
+        
 
-        // var points = new Float32Array(max_points * 3);
-        // var velocities = new Float32Array(max_points * 3);
-
-        gl.clearColor(1.0, 1.0, 1.0, 1.0);
-        gl.enable(gl.BLEND);
-        gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
-        gl.clear(gl.COLOR_BUFFER_BIT);
-
-        navigator.getUserMedia({
-            video: true
+        navigator.getUserMedia(
+          {
+            video: {
+              // series of minWidth make browser always take maximum resolution on HW camera
+              optional: [
+                {minWidth: 320},
+                {minWidth: 640},
+                {minWidth: 1024},
+                {minWidth: 1280},
+                {minWidth: 1920},
+                {minWidth: 2560},
+              ]
+            }, audio: false
           }, 
           function(stream) {
             var video = document.createElement("video");
@@ -158,77 +211,60 @@
             video.height = window.innerHeight;
 
             video.addEventListener("canplaythrough", function() {
-              // document.getElementById("thunder").play();
-              // setTimeout(function() {
-              //   document.getElementById("rain").play();
-              // }, 4000);
 
-              glUtils.loadTexture(gl, gl.TEXTURE0, video, {
+              // set defaults
+              var start_anim = Date.now();
+              var direction = -1;
+
+              // create texture with video
+              var vidTexture = glUtils.loadTexture(gl, gl.TEXTURE0, video, {
                 min_filter: gl.LINEAR,
                 wrap_s: gl.CLAMP_TO_EDGE,
                 wrap_t: gl.CLAMP_TO_EDGE
               });
 
+              // create white texture -> canvas
+              var whiteImg = new Uint8Array(canvas.width * canvas.height * 4).fill(255); // all white pixels
+              var texture1 = gl.createTexture();
+              gl.activeTexture(gl.TEXTURE1);
+              gl.bindTexture(gl.TEXTURE_2D, texture1);
+              gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+              gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+              gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+              gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+              gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+              gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, video.width, video.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, whiteImg);
+
+              var framebuffer1 = gl.createFramebuffer();
+              gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer1);
+              gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture1, 0);
+
+              var texture2 = gl.createTexture();
+              gl.activeTexture(gl.TEXTURE2);
+              gl.bindTexture(gl.TEXTURE_2D, texture2);
+              gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+              gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+              gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+              gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+              gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+              gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, video.width, video.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+
+              var framebuffer2 = gl.createFramebuffer();
+              gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer2);
+              gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture2, 0);
+
               setTimeout(drawScene, 1500);
 
               function drawScene() {
+                // main loop
+                
+                var now = Date.now();
+
+                // loop
                 requestAnimationFrame(drawScene);
 
-                gl.clear(gl.COLOR_BUFFER_BIT);
-
-                // var new_num_points = num_points;
-                // var i;
-                // var count;
-                // var repulsion;
-
-                // if (num_points < max_points) {
-                //   new_num_points += Math.floor(Math.random() * 100);
-                //   new_num_points = Math.min(new_num_points, max_points);
-                // }
-
-                // if (new_num_points > num_points) {
-
-                //   while(num_points < new_num_points) {
-                //     points[num_points * 3] = Math.random() * 2 - 1;
-                //     points[num_points * 3 + 1] = 1,
-                //     points[num_points * 3 + 2] = Math.random() * 2 - 1
-
-                //     velocities[num_points * 3] = 0;
-                //     velocities[num_points * 3 + 1] = Math.random() * 0.01,
-                //     velocities[num_points * 3 + 2] = 0;
-
-                //     num_points++;
-                //   }
-
-                // }
-                
-                // for (i = 0, count = num_points * 3; i < count; i += 3) {
-                //   repulsion = getRepulsion(points[i], points[i + 1], points[i + 2]);
-
-                //   velocities[i] += repulsion[0];
-                //   velocities[i + 1] += gravity + repulsion[1];
-                //   velocities[i + 2] += repulsion[2];
-
-                //   velocities[i]     *= friction;
-                //   velocities[i + 2] *= friction;
-
-                //   points[i]     += velocities[i];
-                //   points[i + 1] -= velocities[i + 1];
-                //   points[i + 2] += velocities[i + 2];
-
-                //   points[i + 2] = Math.max(-1, Math.min(points[i + 2], 1));
-
-                //   if (points[i + 1] < -1) {
-                //     points[i] = Math.random() * 2 - 1;
-                //     points[i + 1] = 1;
-                //     points[i + 2] = Math.random() * 2 - 1;
-
-                //     velocities[i + 1] = Math.random() * 0.01;
-                //   }
-                // }
-
-                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
-                glUtils.setBuffer(gl, gl_vars.aPosition, 
+                // set buffer to render
+                glUtils.setBuffer(gl, gl_varsMagic.aPosition, 
                   new Float32Array([
                       -1.0, -1.0,
                       1.0, -1.0,
@@ -237,7 +273,67 @@
                       1.0, -1.0,
                       1.0, 1.0]), 
                   2);
-                          
+
+                glUtils.setBuffer(gl, gl_varsRender.aPosition, 
+                  new Float32Array([
+                      -1.0, -1.0,
+                      1.0, -1.0,
+                      -1.0, 1.0,
+                      -1.0, 1.0,
+                      1.0, -1.0,
+                      1.0, 1.0]), 
+                  2);
+
+                // update video texture
+                gl.activeTexture(gl.TEXTURE0);
+                gl.bindTexture(gl.TEXTURE_2D, vidTexture);
+                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
+
+                // magic happens
+                gl.activeTexture(gl.TEXTURE1);
+                gl.bindTexture(gl.TEXTURE_2D, texture1);
+                gl.bindFramebuffer(gl.FRAMEBUFFER,framebuffer2);
+                gl.useProgram(programMagic);
+
+                // send uniforms to shader
+                gl.uniform1f(gl_varsMagic.thresh, thresh);
+                gl.uniform1f(gl_varsMagic.direction, direction);
+
+                gl.clearColor(1,1,1,1);
+                gl.clear(gl.COLOR_BUFFER_BIT);
+                gl.disable(gl.DEPTH_TEST);
+                gl.viewport(0, 0, canvas.width, canvas.height);
+
+                gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+                // render to input texture
+                gl.disable(gl.BLEND);
+                gl.activeTexture(gl.TEXTURE2);
+                gl.bindTexture(gl.TEXTURE_2D, texture2);
+                gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer1);
+                gl.useProgram(programRender);
+
+                // gl.clearColor(0,0,0,1);
+                // gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+                // gl.enable(gl.DEPTH_TEST);
+                gl.viewport(0, 0, canvas.width, canvas.height);
+
+                gl.drawArrays(gl.TRIANGLES, 0, 6);
+                
+                // if control of loop is to happen here, then read pixels from framebuffer
+                // var pixels = new Uint8Array(canvas.width * canvas.height * 4);
+                // gl.readPixels(0, 0, canvas.width, canvas.height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+
+                // render to canvas
+                gl.bindTexture(gl.TEXTURE_2D, texture1);
+                gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+                gl.useProgram(programRender);
+
+                gl.clearColor(0,0,0,1);
+                gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+                gl.enable(gl.DEPTH_TEST);
+                gl.viewport(0, 0, canvas.width, canvas.height);
+
                 gl.drawArrays(gl.TRIANGLES, 0, 6);
 
               };  
@@ -255,7 +351,7 @@
           canvas.width = document.body.clientWidth;
           canvas.height = document.body.clientHeight;
           gl.viewport(0, 0, canvas.width, canvas.height);
-          gl.uniform2f(gl_vars.uResolution, canvas.width, canvas.height);
+          // gl.uniform2f(gl_varsRender.uResolution, canvas.width, canvas.height);
         }
         
       };

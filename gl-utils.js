@@ -26,7 +26,7 @@
 
   window.glUtils = {
     getGL: function(canvas) {
-      var gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
+      var gl = canvas.getContext("webgl", {preserveDrawingBuffer: true}) || canvas.getContext("experimental-webgl", {preserveDrawingBuffer: true});
       gl.viewport(0, 0, canvas.width, canvas.height);
 
       return gl;
